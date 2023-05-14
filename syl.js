@@ -1,73 +1,116 @@
-function convert() {
-    syllable(document.getElementById("input").value);
+let list = {};
+let xhr = new XMLHttpRequest();
+xhr.open('GET', 'cmudict-0.7b.txt');
+xhr.onload = function () {
+    let res = xhr.responseText.split('\n');
+    for (let i = 0; i < res.length; i++) {
+        if (res[i].length <= 2) continue;
+        if (res[i][0] !== ';' && res[i][1] !== ';') {
+            let split = res[i].split('  ');
+            list[split[0]] = split[1];
+        }
+    }
 }
+xhr.send();
 
-function syllable(input) {
+let split_str = ' / ';
 
-    let input2 = input.split(/([^a-zA-Z'’])/g);
-    input2.pop();
-
-    for (let i = 0; i < input2.length; i++) {
-        if (!(/[a-z]/ig.test(input2[i]))) continue;
-        let flapt = /[aiueo](tt|t|dd|d)[aiueol]/ig
-        while (flapt.test(input2[i])) {
-            let res = input2[i].match(flapt)[0],
-                res2 = res,
-                res3 = res2.match(/tt|t|dd|d/)[0];
-            res2 = res2.replace(res3, `<span class="flapt">${res3}</span>`);
-            input2[i] = input2[i].replace(res, res2);
-        }
-        let reduction = /[bcfghjlmnpqrsvwxyz](t|k|d)[bcfghjlmnpqrsvwxyz]]/ig
-        while (reduction.test(input2[i])) {
-            let res = input2[i].match(reduction)[0],
-                res2 = res,
-                res3 = res2.match(/t|k|d/)[0];
-            res2 = res2.replace(res3, `<span class="reduction">${res3}</span>`);
-            input2[i] = input2[i].replace(res, res2);
-        }
-    }
-
-
-    for (let i = 0; i < input2.length; i++) {
-        if (!(/[a-z]/ig.test(input2[i]))) continue;
-        for (let j = i + 1; j < input2.length; j++) {
-            if (input2[j] === ' ') continue;
-
-            let silente = '';
-
-            if (input2[i].length >= 3) {
-                let last3 = input2[i].slice(-3);
-                if (/[aiueoy][bcdfghjklmnpqrstvwxyz]e/ig.test(last3)) {
-                    silente = "(e)";
-                    input2[i] = input2[i].slice(0, -1);
+function convert() {
+    let input = document.getElementById("input").value,
+        split = input.split(/([^a-zA-Z'’])/g),
+        cmu = [],
+        long_v = ['AA', 'AA1', 'AA2', 'AE', 'AE1', 'AE2', 'AW', 'AW0', 'AW1', 'AW2', 'AY', 'AY0', 'AY1', 'AY2', 'ER', 'ER0', 'ER1', 'ER2', 'EY', 'EY0', 'EY1', 'EY2', 'IY', 'IY1', 'IY2', 'OW', 'OW0', 'OW1', 'OW2', 'OY', 'OY0', 'OY1', 'OY2', 'UW', 'UW0', 'UW1', 'UW2'],
+        short_v = ['AA0', 'AE0', 'AH', 'AH0', 'AH1', 'AH2', 'AO', 'AO0', 'AO1', 'AO2', 'EH', 'EH0', 'EH1', 'EH2', 'IH', 'IH0', 'IH1', 'IH2', 'IY0', 'UH', 'UH0', 'UH1', 'UH2',],
+        vow = long_v.concat(short_v),
+        con = ['B', 'CH', 'D', 'DH', 'F', 'G', 'HH', 'JH', 'K', 'L', 'M', 'N', 'NG', 'P', 'R', 'S', 'SH', 'T', 'TH', 'V', 'W', 'Y', 'Z', 'ZH'];
+    split = split.filter(e => e !== '');
+    vow.sort(function (a, b) { return b.length - a.length; });
+    let reg_vow = RegExp('(' + vow.join('|') + ')', 'g');
+    for (let i = 0; i < split.length; i++) {
+        let upper = split[i].toUpperCase();
+        if (upper in list) cmu.push(syllable(upper));
+        else {
+            let push = '';
+            if (upper.length >= 3) {
+                let last2 = upper.slice(-2),
+                    upper2 = upper.slice(0, -2);
+                if (upper2 in list) {
+                    if (last2 === 'LY') cmu.push(syllable(upper2) + split_str + 'L IY0');
+                    else if (last2 === '’S') push = syllable(upper2) + ' Z';
+                    else if (last2 === "'S") push = syllable(upper2) + ' Z';
                 }
             }
-
-            let last1 = input2[i].slice(-1);
-            if (/[tdsz]/ig.test(last1) && input2[j][0] === 'y') input2[i + 1] = '〜';
-            else if (/[bcdfghjklmnpqrstvwxyz]/ig.test(last1) && /[aiueo]/ig.test(input2[j][0])) input2[i + 1] = '⌒';
-
-            if (input2[i].length >= 2 && input2[i + 1] !== '〜') {
-                let last2 = input2[i].slice(-2);
-                if (/[aiueo](t|d)/ig.test(last2) && /[aiueol]/ig.test(input2[j][0])) {
-                    input2[i] = input2[i].slice(0, -1) + `<span class="flapt">${last2[1]}</span>`;
-                }
-                else if (/[bcfghjlmnpqrsvwxyz](t|k|d)/ig.test(last2) && /[bcfghjlmnpqrsvwxyz]/ig.test(input2[j][0])) {
-                    input2[i] = input2[i].slice(0, -1) + `<span class="reduction">${last2[1]}</span>`;
-                }
-                else if (/[dbgtpk]/ig.test(last2[1]) && /[bcdfghjklmnpqrstvwxyz]/ig.test(input2[j][0])) {
-                    input2[i] = input2[i].slice(0, -1) + `<span class="reduction">${last2[1]}</span>`;
-                }
-                else if (/[bcdfghjklmnpqrstvwxyz]/ig.test(last2[1]) && last2[1] === input2[j][0]) {
-                    input2[i] = input2[i].slice(0, -1) + `<span class="reduction">${last2[1]}</span>`;
-                }
+            if (push === '') {
+                push = upper.split(/(?<=[AIUEO])/g);
+                for (let j = 0; j < push.length; j++) push[j] = push[j].split('').join(' ');
+                push = push.join(split_str);
             }
-
-            input2[i] = input2[i] + silente;
-            break;
+            cmu.push(push);
         }
     }
+    for (let i = 0; i < cmu.length; i++) {
+        let counter = 0,
+            syl = cmu[i].split(split_str);
+        for (let j = 0; j < syl.length; j++) {
+            let plus = syl[j].split(' ');
+            if (j > 0) {
+                let flag = true;
+                for (let k = counter; k < split[i].length; k++) {
+                    if (syl[j][0] === split[i][k].toUpperCase()) {
+                        split[i] = split[i].slice(0, k) + split_str + split[i].slice(k);
+                        counter += split_str.length;
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag) {
+                    for (let k = counter - 1; k < split[i].length - 1; k++) {
+                        if (/[aiueo]/.test(split[i][k])) {
+                            split[i] = split[i].slice(0, k + 1) + split_str + split[i].slice(k + 1);
+                            counter += split_str.length;
+                            break;
+                        }
+                    }
+                }
+            }
+            counter += plus.length;
+        }
+        // silent E
+        let last3 = split[i].slice(-3);
+        if (split[i].includes(' / e /') || last3 === ' / e') split[i] = split[i].replaceAll(' / e', 'e');
+    }
+    console.log(split);
+    console.log(cmu);
+    document.getElementById('text').innerHTML = split.join('　');
 
-    let out = input2.join('');
-    document.getElementById('text').innerHTML = out;
+
+    function syllable(upper) {
+        let word = list[upper].split(reg_vow);
+        word = word.filter(e => e !== '');
+        word = word.filter(e => e !== ' ');
+        for (let j = 0; j < word.length - 1; j++) {
+            let syl = word[j];
+            if (vow.includes(syl)) {
+                if (vow.includes(word[j + 1])) {
+                    if (long_v.includes(word[j])) word.splice(j + 1, 0, split_str);
+                    else word[j] = word[j] + ' ';
+                }
+            }
+            else if (j > 0 && /[A-Z]/.test(syl)) {
+                let phon = syl.split(' ');
+                phon = phon.filter(e => e !== '');
+                if (phon.length === 1) {
+                    /*if (short_v.includes(word[j - 1])) phon.push(split_str);
+                    else if (long_v.includes(word[j - 1])) phon.unshift(split_str);*/
+                    phon.unshift(split_str); // original rule
+                }
+                else if (phon.length === 2) phon.splice(1, 0, split_str);
+                else phon.splice(1, 0, split_str);
+                word[j] = phon.join('');
+                if (word[j][0] !== ' ') word[j] = ' ' + word[j];
+                if (word[j][word[j].length - 1] !== ' ') word[j] = word[j] + ' ';
+            }
+        }
+        return word.join('');
+    }
 }
