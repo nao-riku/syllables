@@ -58,7 +58,7 @@ function convert() {
                 for (let k = counter; k < split[i].length; k++) {
                     if (syl[j][0] === split[i][k].toUpperCase()) {
                         split[i] = split[i].slice(0, k) + split_str + split[i].slice(k);
-                        counter += split_str.length;
+                        counter = k + split_str.length;
                         flag = false;
                         break;
                     }
@@ -67,7 +67,7 @@ function convert() {
                     for (let k = counter - 1; k < split[i].length - 1; k++) {
                         if (/[aiueo]/.test(split[i][k])) {
                             split[i] = split[i].slice(0, k + 1) + split_str + split[i].slice(k + 1);
-                            counter += split_str.length;
+                            counter = k + split_str.length;
                             break;
                         }
                     }
@@ -77,11 +77,14 @@ function convert() {
         }
         // silent E
         let last3 = split[i].slice(-3);
-        if (split[i].includes(' / e /') || last3 === ' / e') split[i] = split[i].replaceAll(' / e', 'e');
+        if (split[i].includes(' / e /') || last3 === ' / e') {
+            split[i] = split[i].replaceAll(' / e', 'e');
+            cmu[i] = cmu[i].replaceAll(' / ER', ' ER');
+        }
     }
     console.log(split);
     console.log(cmu);
-    document.getElementById('text').innerHTML = split.join('　');
+    document.getElementById('text').innerHTML = split.join('　') + '<br><br><br>' + cmu.join('　').replace(/[0-9]/g, '').toLowerCase();
 
 
     function syllable(upper) {
